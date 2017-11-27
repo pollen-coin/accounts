@@ -20,6 +20,7 @@ class Wallet:
         self.config_parser = configparser.ConfigParser()
         self.config_parser.read('config.ini')
         self.config = self.config_parser['wallet']
+        self.address = self.config['address']
         self.rpc_host = self.config['rpc_host']
         self.rpc_port = self.config['rpc_port']
         self.rpc_url = self.rpc_host + ':' + self.rpc_port + '/json_rpc'
@@ -59,10 +60,7 @@ class Wallet:
         """
         :return: wallet's address
         """
-        rpc_method = 'getaddress'
-        result = self.post_request(rpc_method)['result']
-        address = result['address']
-        return address
+        return self.address
 
     def get_unverified_balance(self):
         """
@@ -70,9 +68,8 @@ class Wallet:
         """
         rpc_method = 'getbalance'
         result = self.post_request(rpc_method)['result']
-        unverified_balance = result['balance']
-        # TODO: Sanity check on conversion
-        float_amount = cryptonote_to_float(unverified_balance)
+        unverified_balance = result['locked_amount']
+        float_amount = cryptonote_to_pollen(unverified_balance)
         return float_amount
 
     def get_available_balance(self):
@@ -81,22 +78,40 @@ class Wallet:
         """
         rpc_method = 'getbalance'
         result = self.post_request(rpc_method)['result']
-        available_balance = result['unlocked_balance']
-        # TODO: Sanity check on conversion
-        float_amount = cryptonote_to_float(available_balance)
+        available_balance = result['available_balance']
+        float_amount = cryptonote_to_pollen(available_balance)
         return float_amount
 
     def get_payment_info(self, payment_id):
+        """
+
+        :param payment_id:
+        :return:
+        """
         rpc_method = 'get_payments'
-
-        params = {"payment_id": payment_id,
-                  }
-
+        params = {"payment_id": payment_id,}
         result = self.post_request(rpc_method, params)['result']
-
         return result
 
-    def transfer(self, amount, deposit_address, payment_id, mixin=4):
+    def get_transfers(self):
+        """
+        :return: List of all wallet transfers.
+        Example:
+        [{"address":"","amount":102,"blockIndex":1174,"fee":0,"output":false,"paymentId":"","time":1511816829,
+          "transactionHash":"76ab7ce1a049d6bc3e35cebee6acc17b6861226ac8749188c422ca05dc1ced2a","unlockTime":1234},
+        ...]
+        """
+        rpc_method = 'get_transfers'
+        result = self.post_request(rpc_method)['result']
+        transfers = result['transfers']
+
+        # Convert amounts to Pollen
+        for transfer in transfers:
+            transfer['amount'] = cryptonote_to_pollen(transfer['amount'])
+
+        return transfers
+
+    def transfer(self, amount, deposit_address, payment_id, mixin=1):
         """
         :param amount: The amount to transfer.
         :param deposit_address: The address to which coin will be sent.
@@ -107,7 +122,7 @@ class Wallet:
         rpc_method = 'transfer'
 
         # TODO: Sanity check on conversion
-        cryptonote_amount = float_to_cryptonote(amount)
+        cryptonote_amount = pollen_to_cryptonote(amount)
 
         recipients = [{"address": deposit_address,
                        "amount": cryptonote_amount}]
@@ -135,7 +150,7 @@ class Wallet:
         return self.get_available_balance() == self.get_unverified_balance()
 
 
-def cryptonote_to_float(cryptonote_amount):
+def cryptonote_to_pollen(cryptonote_amount):
     """
     :param cryptonote_amount: String
     :return: float amount in Pollen
@@ -149,10 +164,10 @@ def cryptonote_to_float(cryptonote_amount):
     return float_amount
 
 
-def float_to_cryptonote(float_amount):
+def pollen_to_cryptonote(float_amount):
     """
     :param float_amount: Pollen amount
-    :return: CryptoNote int
+    :return: CryptoNote integer
     """
     float_string = str(float_amount)
     power_accumulator = 0
@@ -183,4 +198,4 @@ def generate_payment_id():
     Generates a random payment id.
     :return: 30 character hex string
     """
-    return binascii.b2a_hex(os.urandom(15))
+    return binascii.b2a_hex(os.urandom(32))
