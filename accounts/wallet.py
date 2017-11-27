@@ -1,7 +1,8 @@
 import json
+import os
+import binascii
 import configparser
 import requests
-from requests.auth import HTTPDigestAuth
 
 class WalletException(Exception):
     """Raised for exceptions related to the Pollen Wallet"""
@@ -12,24 +13,21 @@ class WalletException(Exception):
 
 class Wallet:
     """
-    Implementation of rpc api
+    Implementation of CryptoNote rpc api
     """
 
     def __init__(self):
         self.config_parser = configparser.ConfigParser()
         self.config_parser.read('config.ini')
         self.config = self.config_parser['wallet']
-        self.wallet_name = self.config['wallet_name']
         self.rpc_host = self.config['rpc_host']
         self.rpc_port = self.config['rpc_port']
-        self.rpc_user = self.config['rpc_user']
-        self.rpc_pass = self.config['rpc_pass']
         self.rpc_url = self.rpc_host + ':' + self.rpc_port + '/json_rpc'
 
-    def post_request(self, method, params={}):
+    def post_request(self, method, params=None):
         headers = {'content-type': 'application/json'}
 
-        if not params:
+        if params is None:
             data = {
                 "method": method
             }
@@ -45,22 +43,31 @@ class Wallet:
             self.rpc_url,
             data=json.dumps(data),
             headers=headers,
-            auth=HTTPDigestAuth(self.rpc_user, self.rpc_pass))
+        )
 
         response_data = response.json()
 
         if 'error' in response_data:
-            raise PollenWalletException(response_data['error']['message'])
+            if 'message' in response_data['error']:
+                raise PollenWalletException(response_data['error']['message'])
+            else:
+                raise PollenWalletException('Unspecified RPC Error')
 
         return response_data
 
     def get_address(self):
+        """
+        :return: wallet's address
+        """
         rpc_method = 'getaddress'
         result = self.post_request(rpc_method)['result']
         address = result['address']
         return address
 
     def get_unverified_balance(self):
+        """
+        :return: unconfirmed balance of the wallet
+        """
         rpc_method = 'getbalance'
         result = self.post_request(rpc_method)['result']
         unverified_balance = result['balance']
@@ -69,6 +76,9 @@ class Wallet:
         return float_amount
 
     def get_available_balance(self):
+        """
+        :return: confirmed balance of the wallet
+        """
         rpc_method = 'getbalance'
         result = self.post_request(rpc_method)['result']
         available_balance = result['unlocked_balance']
@@ -87,6 +97,13 @@ class Wallet:
         return result
 
     def transfer(self, amount, deposit_address, payment_id, mixin=4):
+        """
+        :param amount: The amount to transfer.
+        :param deposit_address: The address to which coin will be sent.
+        :param payment_id: The payment id to include in the transaction.
+        :param mixin: The mixin count to use.  Defaults to 4.
+        :return: The transaction hash.
+        """
         rpc_method = 'transfer'
 
         # TODO: Sanity check on conversion
@@ -104,19 +121,12 @@ class Wallet:
 
         return tx_hash
 
-    def get_expected_transaction_fee(self):
-        """
-        Returns expected fee/transaction in XMR
-        """
-        # TODO: make this more accurate.. maybe look at previous transactions using the daemon rpc
-        fee = 0.03
-        return fee
-
     def has_rpc_access(self):
+        """
+        :return: True if no connection error
+        """
         try:
             self.get_address()
-            self.get_available_balance()
-            self.get_unverified_balance()
         except requests.ConnectionError:
             return False
         return True
@@ -126,6 +136,10 @@ class Wallet:
 
 
 def cryptonote_to_float(cryptonote_amount):
+    """
+    :param cryptonote_amount: String
+    :return: float amount in Pollen
+    """
     cryptonote_amount = str(cryptonote_amount)
     if len(cryptonote_amount) < 12:
         cryptonote_amount = '0' * (12 - len(cryptonote_amount)) + cryptonote_amount
@@ -136,6 +150,10 @@ def cryptonote_to_float(cryptonote_amount):
 
 
 def float_to_cryptonote(float_amount):
+    """
+    :param float_amount: Pollen amount
+    :return: CryptoNote int
+    """
     float_string = str(float_amount)
     power_accumulator = 0
 
@@ -158,3 +176,11 @@ def float_to_cryptonote(float_amount):
     #    float_string = float_string[1:]
 
     return int(float_string)
+
+
+def generate_payment_id():
+    """
+    Generates a random payment id.
+    :return: 30 character hex string
+    """
+    return binascii.b2a_hex(os.urandom(15))
