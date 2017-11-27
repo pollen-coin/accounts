@@ -13,7 +13,7 @@ class WalletException(Exception):
 
 class Wallet:
     """
-    Implementation of CryptoNote rpc api
+    Implementation of Pollen rpc api
     """
 
     def __init__(self):
@@ -49,9 +49,9 @@ class Wallet:
 
         if 'error' in response_data:
             if 'message' in response_data['error']:
-                raise PollenWalletException(response_data['error']['message'])
+                raise WalletException(response_data['error']['message'])
             else:
-                raise PollenWalletException('Unspecified RPC Error')
+                raise WalletException('Unspecified RPC Error')
 
         return response_data
 
