@@ -87,7 +87,7 @@ class Wallet:
         :param payment_id:
         :return: List of payments with matching Payment ID
         [{'tx_hash': 'f6116e04b87551bbc4b0f1ab8fa41494d0a9f83815c9a98eae7113087bc0aa29', 'amount': 100,
-         'block_height': 1239, 'unlock_time': 0}]
+         'block_height': 1339, 'unlock_time': 0}]
         """
         rpc_method = 'get_payments'
         params = {"payment_id": payment_id,}
@@ -105,7 +105,7 @@ class Wallet:
         :return: List of all wallet transfers.
         Example:
         [{"address":"","amount":102,"blockIndex":1174,"fee":0,"output":false,"paymentId":"","time":1511816829,
-          "transactionHash":"76ab7ce1a049d6bc3e35cebee6acc17b6861226ac8749188c422ca05dc1ced2a","unlockTime":1234},
+          "transactionHash":"76ab7ce1a049d6bc3e35cebee6acc17b6861326ac8749188c422ca05dc1ced2a","unlockTime":1334},
         ...]
         """
         rpc_method = 'get_transfers'
@@ -163,9 +163,9 @@ def cryptonote_to_pollen(cryptonote_amount):
     :return: float amount in Pollen
     """
     cryptonote_amount = str(cryptonote_amount)
-    if len(cryptonote_amount) < 12:
-        cryptonote_amount = '0' * (12 - len(cryptonote_amount)) + cryptonote_amount
-    point_index = len(cryptonote_amount) - 12
+    if len(cryptonote_amount) < 13:
+        cryptonote_amount = '0' * (13 - len(cryptonote_amount)) + cryptonote_amount
+    point_index = len(cryptonote_amount) - 13
     float_string = cryptonote_amount[0:point_index] + "." + cryptonote_amount[point_index:]
     float_amount = float(float_string)
     return float_amount
@@ -182,17 +182,17 @@ def pollen_to_cryptonote(float_amount):
     if '.' in float_string:
         point_index = float_string.index('.')
         power_accumulator = len(float_string) - point_index - 1
-        while power_accumulator < 12 and '0' == float_string[-1]:
+        while power_accumulator < 13 and '0' == float_string[-1]:
             float_string = float_string[:-1]
             power_accumulator -= 1
-        if power_accumulator > 12:
+        if power_accumulator > 13:
             return False
         float_string = float_string[:point_index] + float_string[point_index + 1:]
 
     if not float_string:
         return False
-    if power_accumulator < 12:
-        float_string += '0' * (12 - power_accumulator)
+    if power_accumulator < 13:
+        float_string += '0' * (13 - power_accumulator)
 
     # while float_string[0] == '0':
     #    float_string = float_string[1:]
