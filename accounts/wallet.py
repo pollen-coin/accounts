@@ -84,7 +84,6 @@ class Wallet:
 
     def get_payment_info(self, payment_id):
         """
-
         :param payment_id:
         :return: List of payments with matching Payment ID
         [{'tx_hash': 'f6116e04b87551bbc4b0f1ab8fa41494d0a9f83815c9a98eae7113087bc0aa29', 'amount': 100,
@@ -96,8 +95,8 @@ class Wallet:
         payments = result['payments']
 
         # Convert amounts to Pollen
-        for transfer in transfers:
-            transfer['amount'] = cryptonote_to_pollen(transfer['amount'])
+        for payment in payments:
+            payment['amount'] = cryptonote_to_pollen(payment['amount'])
 
         return payments
 
