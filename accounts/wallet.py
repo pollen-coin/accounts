@@ -86,12 +86,20 @@ class Wallet:
         """
 
         :param payment_id:
-        :return:
+        :return: List of payments with matching Payment ID
+        [{'tx_hash': 'f6116e04b87551bbc4b0f1ab8fa41494d0a9f83815c9a98eae7113087bc0aa29', 'amount': 100,
+         'block_height': 1239, 'unlock_time': 0}]
         """
         rpc_method = 'get_payments'
         params = {"payment_id": payment_id,}
         result = self.post_request(rpc_method, params)['result']
-        return result
+        payments = result['payments']
+
+        # Convert amounts to Pollen
+        for transfer in transfers:
+            transfer['amount'] = cryptonote_to_pollen(transfer['amount'])
+
+        return payments
 
     def get_transfers(self):
         """
@@ -141,7 +149,7 @@ class Wallet:
         :return: True if no connection error
         """
         try:
-            self.get_address()
+            self.get_transfers()
         except requests.ConnectionError:
             return False
         return True
