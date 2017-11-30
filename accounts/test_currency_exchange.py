@@ -1,6 +1,6 @@
 import unittest
 import math
-from wallet import cryptonote_to_pollen, pollen_to_cryptonote
+from wallet import cryptonote_to_pollen, pollen_to_cryptonote, generate_payment_id
 
 
 class CurrencyExchangeTestCase(unittest.TestCase):
@@ -41,6 +41,11 @@ class CurrencyExchangeTestCase(unittest.TestCase):
 		cryptonote_amount = '1'
 		self.assertEqual(cryptonote_to_pollen(cryptonote_amount), 0.00000000001)
 
+	def test_cryptonote_to_pollen_zero_cryptonote(self):
+		# Creates a small string to test rounding
+		cryptonote_amount = '0'
+		self.assertEqual(cryptonote_to_pollen(cryptonote_amount), 0)
+
 	def test_pollen_to_cryptonote_number(self):
 		# Creates big number
 		pollen_amount = 1
@@ -50,6 +55,33 @@ class CurrencyExchangeTestCase(unittest.TestCase):
 		# Creates big number
 		pollen_amount = 9.9
 		self.assertEqual(pollen_to_cryptonote(pollen_amount), int(9.9*10**11))
+
+	def test_pollen_to_cryptonote_11_digits_past_decimal(self):
+		pollen_amount = 1.23456789987
+		self.assertEqual(pollen_to_cryptonote(pollen_amount), 123456789987)
+
+	def test_pollen_to_cryptonote_12_digits_past_decimal(self):
+		# Shouldn't go past 11 digits. int() rounds in this case
+		pollen_amount = 1.234567899876
+		self.assertEqual(pollen_to_cryptonote(pollen_amount), 123456789988)
+
+	def test_pollen_to_cryptonote_lots_of_pollen(self):
+		pollen_amount = 10**50
+		self.assertEqual(pollen_to_cryptonote(pollen_amount), 10**61)
+
+	def test_pollen_to_cryptonote_zero_pollen(self):
+		pollen_amount = 0
+		self.assertEqual(pollen_to_cryptonote(pollen_amount), 0)
+
+
+class PaymentIDTest(unittest.TestCase):
+	"""
+	Tests if the payment id is generated correctly
+	"""
+	def test_generate_payment_id_test_length(self):
+		id = generate_payment_id()
+		self.assertEqual(len(id), 30)
+
 
 if __name__ == '__main__':
 	unittest.main()
