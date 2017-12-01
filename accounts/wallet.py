@@ -1,8 +1,11 @@
-import json
-import os
 import binascii
 import configparser
+import json
+import os
+from hashlib import sha256
+
 import requests
+
 
 class WalletException(Exception):
     """Raised for exceptions related to the Pollen Wallet"""
@@ -90,7 +93,7 @@ class Wallet:
          'block_height': 1139, 'unlock_time': 0}]
         """
         rpc_method = 'get_payments'
-        params = {"payment_id": payment_id,}
+        params = {"payment_id": payment_id, }
         result = self.post_request(rpc_method, params)['result']
         payments = result['payments']
 
@@ -128,7 +131,6 @@ class Wallet:
         """
         rpc_method = 'transfer'
 
-        # TODO: Sanity check on conversion
         cryptonote_amount = pollen_to_cryptonote(amount)
 
         recipients = [{"address": deposit_address,
@@ -168,6 +170,7 @@ def cryptonote_to_pollen(cryptonote_amount):
     point_index = len(cryptonote_amount) - 11
     float_string = cryptonote_amount[0:point_index] + "." + cryptonote_amount[point_index:]
     float_amount = float(float_string)
+
     return float_amount
 
 
@@ -185,24 +188,95 @@ def pollen_to_cryptonote(float_amount):
         while power_accumulator < 11 and '0' == float_string[-1]:
             float_string = float_string[:-1]
             power_accumulator -= 1
-        if power_accumulator > 11:
-            return False
+        while power_accumulator > 11:
+            # Truncate longer decimal places
+            float_string = float_string[:-1]
+            power_accumulator -= 1
         float_string = float_string[:point_index] + float_string[point_index + 1:]
 
     if not float_string:
-        return False
+        return None
     if power_accumulator < 11:
         float_string += '0' * (11 - power_accumulator)
-
-    # while float_string[0] == '0':
-    #    float_string = float_string[1:]
 
     return int(float_string)
 
 
-def generate_payment_id():
+def generate_payment_id(note=None):
     """
     Generates a random payment id.
-    :return: 30 character hex string
+    If a note is provided, it is encoded in the payment id.
+    Max note length: 20 Chars
+    :return: 64 character hex string
     """
-    return binascii.b2a_hex(os.urandom(32))
+    if note is None:
+        # Don't generate payment id's with note prefix to avoid confusion
+        payment_id = binascii.b2a_hex(os.urandom(32)).decode()
+        while payment_id[:3] == '1A4':
+            payment_id = binascii.b2a_hex(os.urandom(32)).decode()
+        return payment_id
+    else:
+        note = note.encode()
+        if len(note) > 20:
+            raise WalletException("Note is too long.  Max of 20 characters.")
+
+        # Notes start with prefix 1A4
+        prefix = '1A4'
+
+        # Encode note and get length
+        hex_note = binascii.hexlify(note)
+        note_length = hex(len(hex_note.decode()))[2:]
+        if len(note_length) < 2:
+            note_length = '0'+note_length
+
+        # Add simple checksum
+        h = sha256()
+        h.update(hex_note)
+        hash_digest = h.hexdigest()[:2]
+
+        # Convert bytes to string
+        hex_note = hex_note.decode()
+
+        # Add random chars to end
+        total_length = len(prefix) + len(hex_note) + len(note_length) + len(hash_digest)
+        remaining_length = 64 - total_length
+        random_string = binascii.b2a_hex(os.urandom(remaining_length))[:remaining_length].decode()
+
+        # Construct final string
+        payment_id = prefix + note_length + hex_note + hash_digest + random_string
+        return payment_id
+
+
+def has_note(payment_id):
+    """
+    Returns true if payment id has note.
+    :param payment_id:
+    :return:
+    """
+    return payment_id[:3] == '1A4'
+
+
+def get_note(payment_id):
+    """
+    Returns the note encoded in a payment id.
+    :param payment_id:
+    :return: the encoded note
+    """
+    if not has_note(payment_id):
+        raise WalletException("Payment ID does not contain note")
+    # Get length
+    length = int(payment_id[3:5], 16)
+
+    # Get note
+    hex_note = payment_id[5:length+5]
+    note = bytearray.fromhex(hex_note).decode()
+
+    # Get check sum and verify
+    h = sha256()
+    h.update(hex_note.encode())
+    hash_digest = h.hexdigest()[:2]
+    id_hash = payment_id[length+5:length+7]
+    if id_hash != hash_digest:
+        raise WalletException("Message checksum corrupt")
+
+    return note
