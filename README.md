@@ -1,4 +1,4 @@
-# accounts
+# accounts [![Build Status](https://travis-ci.org/pollen-coin/accounts.svg?branch=master)](https://travis-ci.org/pollen-coin/accounts)
 Python interface for Pollen and other cryptonote based currencies with account abstractions
 
 To start the RPC server:
