@@ -1,6 +1,6 @@
 import unittest
 import sys, os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'accounts')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'pollen_access')))
 from wallet import cryptonote_to_pollen, pollen_to_cryptonote, generate_payment_id, get_note
 
 
