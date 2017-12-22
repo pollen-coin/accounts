@@ -118,12 +118,12 @@ class Wallet:
 
         return transfers
 
-    def transfer(self, amount, deposit_address, payment_id, mixin=2):
+    def transfer(self, amount, deposit_address, payment_id, mixin=1):
         """
         :param amount: The amount to transfer.
         :param deposit_address: The address to which coin will be sent.
         :param payment_id: The payment id to include in the transaction.
-        :param mixin: The mixin count to use.  Defaults to 2.
+        :param mixin: The mixin count to use.  Defaults to 1.
         :return: The transaction hash.
         """
         rpc_method = 'transfer'
