@@ -1,4 +1,4 @@
-# pollen-access [![Build Status](https://travis-ci.org/pollen-coin/pollen_access.svg?branch=master)](https://travis-ci.org/pollen-coin/pollen_access)
+# pollen_access [![Build Status](https://travis-ci.org/pollen-coin/pollen_access.svg?branch=master)](https://travis-ci.org/pollen-coin/pollen_access)
 Python interface for Pollen and other cryptonote based currencies.
 
 ## Features:
@@ -29,4 +29,4 @@ Use:
 
 `payment_id = w.generate_payment_id('Thanks for the fish')`
 
-`tx_hash = transfer(self, 100, 'SENDADDRESS', payment_id, mixin=4)`
+`tx_hash = w.transfer(self, 100, 'SENDADDRESS', payment_id, mixin=4)`
