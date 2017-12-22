@@ -20,9 +20,9 @@ class Wallet:
     """
 
     def __init__(self, address, host, port):
-        self.address = self.config['address']
-        self.rpc_host = self.config['rpc_host']
-        self.rpc_port = self.config['rpc_port']
+        self.address = address
+        self.rpc_host = host
+        self.rpc_port = port
         self.rpc_url = self.rpc_host + ':' + self.rpc_port + '/json_rpc'
 
     def post_request(self, method, params=None):
