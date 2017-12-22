@@ -29,4 +29,4 @@ Use:
 
 `payment_id = w.generate_payment_id('Thanks for the fish')`
 
-`tx_hash = w.transfer(self, 100, 'SENDADDRESS', payment_id, mixin=4)`
+`tx_hash = w.transfer(self, 100, 'SENDADDRESS', payment_id, mixin=2)`
