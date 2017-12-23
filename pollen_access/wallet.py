@@ -155,6 +155,50 @@ class Wallet:
     def all_deposits_confirmed(self):
         return self.get_available_balance() == self.get_unverified_balance()
 
+    def generate_payment_id(self, note=None):
+        """
+        Generates a random payment id.
+        If a note is provided, it is encoded in the payment id.
+        Max note length: 20 Chars
+        :return: 64 character hex string
+        """
+        if note is None:
+            # Don't generate payment id's with note prefix to avoid confusion
+            payment_id = binascii.b2a_hex(os.urandom(32)).decode()
+            while payment_id[:3] == '1A4':
+                payment_id = binascii.b2a_hex(os.urandom(32)).decode()
+            return payment_id
+        else:
+            note = note.encode()
+            if len(note) > 20:
+                raise WalletException("Note is too long.  Max of 20 characters.")
+
+            # Notes start with prefix 1A4
+            prefix = '1A4'
+
+            # Encode note and get length
+            hex_note = binascii.hexlify(note)
+            note_length = hex(len(hex_note.decode()))[2:]
+            if len(note_length) < 2:
+                note_length = '0'+note_length
+
+            # Add simple checksum
+            h = sha256()
+            h.update(hex_note)
+            hash_digest = h.hexdigest()[:2]
+
+            # Convert bytes to string
+            hex_note = hex_note.decode()
+
+            # Add random chars to end
+            total_length = len(prefix) + len(hex_note) + len(note_length) + len(hash_digest)
+            remaining_length = 64 - total_length
+            random_string = binascii.b2a_hex(os.urandom(remaining_length))[:remaining_length].decode()
+
+            # Construct final string
+            payment_id = prefix + note_length + hex_note + hash_digest + random_string
+            return payment_id
+
 
 def cryptonote_to_pollen(cryptonote_amount):
     """
@@ -197,51 +241,6 @@ def pollen_to_cryptonote(float_amount):
         float_string += '0' * (11 - power_accumulator)
 
     return int(float_string)
-
-
-def generate_payment_id(note=None):
-    """
-    Generates a random payment id.
-    If a note is provided, it is encoded in the payment id.
-    Max note length: 20 Chars
-    :return: 64 character hex string
-    """
-    if note is None:
-        # Don't generate payment id's with note prefix to avoid confusion
-        payment_id = binascii.b2a_hex(os.urandom(32)).decode()
-        while payment_id[:3] == '1A4':
-            payment_id = binascii.b2a_hex(os.urandom(32)).decode()
-        return payment_id
-    else:
-        note = note.encode()
-        if len(note) > 20:
-            raise WalletException("Note is too long.  Max of 20 characters.")
-
-        # Notes start with prefix 1A4
-        prefix = '1A4'
-
-        # Encode note and get length
-        hex_note = binascii.hexlify(note)
-        note_length = hex(len(hex_note.decode()))[2:]
-        if len(note_length) < 2:
-            note_length = '0'+note_length
-
-        # Add simple checksum
-        h = sha256()
-        h.update(hex_note)
-        hash_digest = h.hexdigest()[:2]
-
-        # Convert bytes to string
-        hex_note = hex_note.decode()
-
-        # Add random chars to end
-        total_length = len(prefix) + len(hex_note) + len(note_length) + len(hash_digest)
-        remaining_length = 64 - total_length
-        random_string = binascii.b2a_hex(os.urandom(remaining_length))[:remaining_length].decode()
-
-        # Construct final string
-        payment_id = prefix + note_length + hex_note + hash_digest + random_string
-        return payment_id
 
 
 def has_note(payment_id):
