@@ -1,7 +1,7 @@
 import unittest
 import sys, os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'pollen_access')))
-from wallet import cryptonote_to_pollen, pollen_to_cryptonote, generate_payment_id, get_note
+from wallet import cryptonote_to_pollen, pollen_to_cryptonote, get_note, Wallet
 
 
 class CurrencyExchangeTestCase(unittest.TestCase):
@@ -82,12 +82,14 @@ class PaymentIDTest(unittest.TestCase):
     """
 
     def test_generate_payment_id_test_length(self):
-        id = generate_payment_id()
+        w = Wallet('0', '0', '0')
+        id = w.generate_payment_id()
         self.assertEqual(len(id), 64)
 
     def test_generate_payment_id_note(self):
+        w = Wallet('0', '0', '0')
         note = "thisisanote"
-        id = generate_payment_id(note)
+        id = w.generate_payment_id(note)
         returned_note = get_note(id)
         self.assertEqual(returned_note, note)
 
